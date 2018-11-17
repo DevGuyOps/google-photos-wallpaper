@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 func downloadImage(filepath string, url string, width int64, height int64) error {
@@ -32,4 +34,9 @@ func downloadImage(filepath string, url string, width int64, height int64) error
 	}
 
 	return nil
+}
+
+func random(min, max int) int {
+	rand.Seed(time.Now().Unix())
+	return rand.Intn(max-min) + min
 }
