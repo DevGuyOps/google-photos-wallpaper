@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 )
@@ -34,6 +36,13 @@ func downloadImage(filepath string, url string, width int64, height int64) error
 	}
 
 	return nil
+}
+
+func setWallpaper(imagePath string) {
+	cmd := exec.Command("/usr/bin/gsettings", "set", "org.gnome.desktop.background", "picture-uri", "file://"+imagePath)
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func random(min, max int) int {
