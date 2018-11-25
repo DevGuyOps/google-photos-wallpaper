@@ -7,9 +7,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"io/ioutil"
 
+	photoslibrary "google.golang.org/api/photoslibrary/v1"
+	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2"
 )
+
+func getClientConfig() *oauth2.Config {
+	b, err := ioutil.ReadFile("client_id.json")
+	if err != nil {
+		log.Fatalf("Unable to read client secret file: %v", err)
+	}
+
+	config, err := google.ConfigFromJSON(b, photoslibrary.PhotoslibraryReadonlyScope)
+	if err != nil {
+		log.Fatalf("Unable to parse client secret file to config: %v", err)
+	}
+
+	return config
+}
 
 func getClient(config *oauth2.Config) *http.Client {
 	// The file token.json stores the user's access and refresh tokens, and is

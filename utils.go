@@ -3,17 +3,16 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"time"
+	log "github.com/sirupsen/logrus"
+	"github.com/reujab/wallpaper"
 )
 
 func downloadImage(filepath string, url string, width int64, height int64) error {
-
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
@@ -35,14 +34,17 @@ func downloadImage(filepath string, url string, width int64, height int64) error
 		return err
 	}
 
+	log.WithFields(log.Fields{
+    "filepath": filepath,
+    "url": url,
+  }).Info("Image downloaded")
+
 	return nil
 }
 
 func setWallpaper(imagePath string) {
-	cmd := exec.Command("/usr/bin/gsettings", "set", "org.gnome.desktop.background", "picture-uri", "file://"+imagePath)
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
+	wallpaper.SetFromFile(imagePath)
+	log.Info("Wallpaper set")
 }
 
 func random(min, max int) int {

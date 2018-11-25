@@ -1,39 +1,41 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
 	"strconv"
+	"os"
+	"strings"
 
-	"golang.org/x/oauth2/google"
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	b, err := ioutil.ReadFile("client_id.json")
-	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+	log.SetLevel(log.InfoLevel)
+
+	if len(os.Args[:]) <= 1 {
+		log.Error("Need more args")
 	}
 
-	config, err := google.ConfigFromJSON(b, photoslibrary.PhotoslibraryReadonlyScope)
-	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
-
+	// Auth user
+	config := getClientConfig()
 	client := getClient(config)
 
+	// Setup client
 	photoslibraryService, err := photoslibrary.New(client)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// getAlbumList(photoslibraryService)
-	// getPhotosFromAlbum(photoslibraryService, "AJEwh1KefYSAZOcl9Jm7xLIwfwUyIBYCI2QVHV-vxHAK5IS0L4BoSAy4q-u8df4yW1EuPb18ciFv")
-	// getPhotosFromAlbum(photoslibraryService, "AJEwh1Ks1GBG2QCp-gkji7VzHM1D1_PJlgc0g1lsNHIn0qbb6cM_Nd2vJL0ygQkoZJi5J08vkMjR")
-	// num := numItemsInAlbum(photoslibraryService, "AJEwh1Ks1GBG2QCp-gkji7VzHM1D1_PJlgc0g1lsNHIn0qbb6cM_Nd2vJL0ygQkoZJi5J08vkMjR")
-	// log.Println(num)
-
-	getRandomPhotoFromAlbum(photoslibraryService, "AJEwh1Ks1GBG2QCp-gkji7VzHM1D1_PJlgc0g1lsNHIn0qbb6cM_Nd2vJL0ygQkoZJi5J08vkMjR")
+	// Deal with args
+	switch strings.ToLower(os.Args[1]) {
+	case "album":
+		switch strings.ToLower(os.Args[2]) {
+		case "random":
+			getRandomPhotoFromAlbum(photoslibraryService, os.Args[3])
+		case "list":
+			getAlbumList(photoslibraryService)
+		}
+	}
 }
 
 func getPhotosFromAlbum(photoslibraryService *photoslibrary.Service, albumId string) {
@@ -58,7 +60,7 @@ func getPhotosFromAlbum(photoslibraryService *photoslibrary.Service, albumId str
 
 func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumId string) {
 	numInAlbum := numItemsInAlbum(photoslibraryService, albumId)
-	photoNumInAlbum := 80 // random(0, numInAlbum)
+	photoNumInAlbum := random(0, numInAlbum)
 	pageSize := 50
 	pageCount := 0
 	nextPageToken := ""
@@ -74,11 +76,25 @@ func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumI
 				AlbumId:   albumId,
 				PageSize:  int64(pageSize),
 				PageToken: nextPageToken,
+				// Filters: &photoslibrary.Filters{
+				// 	MediaTypeFilter: &photoslibrary.MediaTypeFilter {
+				// 		MediaTypes: []string{
+				// 			"PHOTO",
+				// 		},
+				// 	},
+				// },
 			}
 		} else {
 			searchMediaRequest = photoslibrary.SearchMediaItemsRequest{
 				AlbumId:  albumId,
 				PageSize: int64(pageSize),
+				// Filters: &photoslibrary.Filters{
+				// 	MediaTypeFilter: &photoslibrary.MediaTypeFilter {
+				// 		MediaTypes: []string{
+				// 			"PHOTO",
+				// 		},
+				// 	},
+				// },
 			}
 		}
 
@@ -92,13 +108,13 @@ func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumI
 
 		// Download pic and do many things with it
 		if pageCount*pageSize < photoNumInAlbum && pageCount*pageSize+pageSize > photoNumInAlbum {
-			// TODO: Download and stuff
-			log.Println("PIC FOUND")
+			photoIndex := photoNumInAlbum - pageCount * pageSize
+			currItem := items.MediaItems[photoIndex]
+
+			downloadImage("/tmp/google-photo.jpg", currItem.BaseUrl, currItem.MediaMetadata.Width, currItem.MediaMetadata.Height)
+			setWallpaper("/tmp/google-photo.jpg")
 			break
 		}
-
-		log.Println("LOOP")
-		log.Println(pageCount * pageSize)
 
 		pageCount++
 	}
@@ -111,7 +127,7 @@ func getAlbumList(photoslibraryService *photoslibrary.Service) {
 	}
 
 	for _, album := range albumList.Albums {
-		log.Println(album.Title + "-" + album.Id)
+		log.Println(album.Title + " - [" + album.Id + "]")
 	}
 }
 
