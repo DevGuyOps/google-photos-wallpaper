@@ -1,12 +1,16 @@
 package main
 
 import (
-	"strconv"
 	"os"
+	"strconv"
 	"strings"
 
-	photoslibrary "google.golang.org/api/photoslibrary/v1"
 	log "github.com/sirupsen/logrus"
+	photoslibrary "google.golang.org/api/photoslibrary/v1"
+)
+
+const (
+	imagePath = "/home/guy/gphoto.jpg"
 )
 
 func main() {
@@ -108,11 +112,11 @@ func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumI
 
 		// Download pic and do many things with it
 		if pageCount*pageSize < photoNumInAlbum && pageCount*pageSize+pageSize > photoNumInAlbum {
-			photoIndex := photoNumInAlbum - pageCount * pageSize
+			photoIndex := photoNumInAlbum - pageCount*pageSize
 			currItem := items.MediaItems[photoIndex]
 
-			downloadImage("/tmp/google-photo.jpg", currItem.BaseUrl, currItem.MediaMetadata.Width, currItem.MediaMetadata.Height)
-			setWallpaper("/tmp/google-photo.jpg")
+			downloadImage(imagePath, currItem.BaseUrl, currItem.MediaMetadata.Width, currItem.MediaMetadata.Height)
+			setWallpaper(imagePath)
 			break
 		}
 
