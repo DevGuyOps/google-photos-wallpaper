@@ -40,3 +40,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/reujab/wallpaper"
+
+[[constraint]]
+  name = "github.com/jessevdk/go-flags"
+  version = "1.4.0"
