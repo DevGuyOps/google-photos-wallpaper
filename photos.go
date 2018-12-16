@@ -69,7 +69,7 @@ func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumI
 		}
 
 		// Perform search
-		log.Info("Searching for photo")
+		log.Info("Searching for photo...")
 		items, err := photoslibraryService.MediaItems.Search(&searchMediaRequest).Do()
 		if err != nil {
 			log.Println(err)
