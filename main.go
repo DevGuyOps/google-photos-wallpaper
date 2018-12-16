@@ -1,28 +1,41 @@
 package main
 
 import (
+	"fmt"
 	"os"
-	"strconv"
 	"strings"
+
+	"github.com/jessevdk/go-flags"
 
 	log "github.com/sirupsen/logrus"
 	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-const (
-	imagePath = "/home/guy/gphoto.jpg"
-)
+type Opts struct {
+	ConfigPath flags.Filename `short:"c" long:"config" description:"Config file path" default:"config.json"`
+}
 
 func main() {
-	log.SetLevel(log.InfoLevel)
-
 	if len(os.Args[:]) <= 1 {
 		log.Error("Need more args")
 	}
 
+	var opts Opts
+	flags.ParseArgs(&opts, os.Args[:])
+
+	// Get config from file
+	config, err := configFromFile(string(opts.ConfigPath))
+	if err != nil {
+		log.Error(err)
+	}
+
+	// Log setup
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetLevel(log.InfoLevel)
+
 	// Auth user
-	config := getClientConfig()
-	client := getClient(config)
+	clientConfig := getClientConfig(config.ClientConfPath)
+	client := getClient(clientConfig)
 
 	// Setup client
 	photoslibraryService, err := photoslibrary.New(client)
@@ -35,111 +48,16 @@ func main() {
 	case "album":
 		switch strings.ToLower(os.Args[2]) {
 		case "random":
-			getRandomPhotoFromAlbum(photoslibraryService, os.Args[3])
+			mediaItem := getRandomPhotoFromAlbum(photoslibraryService, os.Args[3])
+			if mediaItem != nil {
+				downloadImage(config.WallpaperImgPath, mediaItem.BaseUrl, mediaItem.MediaMetadata.Width, mediaItem.MediaMetadata.Height)
+				setWallpaper(config.WallpaperImgPath)
+			}
 		case "list":
-			getAlbumList(photoslibraryService)
-		}
-	}
-}
-
-func getPhotosFromAlbum(photoslibraryService *photoslibrary.Service, albumId string) {
-	searchMediaRequest := &photoslibrary.SearchMediaItemsRequest{
-		AlbumId:  albumId,
-		PageSize: 50,
-	}
-
-	items, err := photoslibraryService.MediaItems.Search(searchMediaRequest).Do()
-	if err != nil {
-		log.Println(err)
-	}
-
-	numInAlbum := numItemsInAlbum(photoslibraryService, albumId)
-
-	log.Println("here: " + string(random(0, int(numInAlbum))))
-
-	for _, item := range items.MediaItems {
-		downloadImage("items/"+item.Id+".jpg", item.BaseUrl, item.MediaMetadata.Width, item.MediaMetadata.Height)
-	}
-}
-
-func getRandomPhotoFromAlbum(photoslibraryService *photoslibrary.Service, albumId string) {
-	numInAlbum := numItemsInAlbum(photoslibraryService, albumId)
-	photoNumInAlbum := random(0, numInAlbum)
-	pageSize := 50
-	pageCount := 0
-	nextPageToken := ""
-
-	log.Println("Rand Num: " + strconv.Itoa(photoNumInAlbum))
-
-	for pageCount*pageSize < numInAlbum {
-		var searchMediaRequest photoslibrary.SearchMediaItemsRequest
-
-		// Get next page details
-		if nextPageToken != "" {
-			searchMediaRequest = photoslibrary.SearchMediaItemsRequest{
-				AlbumId:   albumId,
-				PageSize:  int64(pageSize),
-				PageToken: nextPageToken,
-				// Filters: &photoslibrary.Filters{
-				// 	MediaTypeFilter: &photoslibrary.MediaTypeFilter {
-				// 		MediaTypes: []string{
-				// 			"PHOTO",
-				// 		},
-				// 	},
-				// },
-			}
-		} else {
-			searchMediaRequest = photoslibrary.SearchMediaItemsRequest{
-				AlbumId:  albumId,
-				PageSize: int64(pageSize),
-				// Filters: &photoslibrary.Filters{
-				// 	MediaTypeFilter: &photoslibrary.MediaTypeFilter {
-				// 		MediaTypes: []string{
-				// 			"PHOTO",
-				// 		},
-				// 	},
-				// },
+			albumList := getAlbumList(photoslibraryService)
+			for _, album := range albumList {
+				log.Info(fmt.Sprintf("%s - [%s]", album.Title, album.Id))
 			}
 		}
-
-		// Perform search
-		items, err := photoslibraryService.MediaItems.Search(&searchMediaRequest).Do()
-		if err != nil {
-			log.Println(err)
-		}
-
-		nextPageToken = items.NextPageToken
-
-		// Download pic and do many things with it
-		if pageCount*pageSize < photoNumInAlbum && pageCount*pageSize+pageSize > photoNumInAlbum {
-			photoIndex := photoNumInAlbum - pageCount*pageSize
-			currItem := items.MediaItems[photoIndex]
-
-			downloadImage(imagePath, currItem.BaseUrl, currItem.MediaMetadata.Width, currItem.MediaMetadata.Height)
-			setWallpaper(imagePath)
-			break
-		}
-
-		pageCount++
 	}
-}
-
-func getAlbumList(photoslibraryService *photoslibrary.Service) {
-	albumList, err := photoslibraryService.Albums.List().Do()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, album := range albumList.Albums {
-		log.Println(album.Title + " - [" + album.Id + "]")
-	}
-}
-
-func numItemsInAlbum(photoslibraryService *photoslibrary.Service, albumId string) int {
-	album, err := photoslibraryService.Albums.Get(albumId).Do()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return int(album.MediaItemsCount)
 }

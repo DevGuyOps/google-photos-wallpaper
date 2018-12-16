@@ -4,18 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"io/ioutil"
 	"net/http"
 	"os"
-	"io/ioutil"
 
-	photoslibrary "google.golang.org/api/photoslibrary/v1"
-	"golang.org/x/oauth2/google"
+	log "github.com/sirupsen/logrus"
+
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	photoslibrary "google.golang.org/api/photoslibrary/v1"
 )
 
-func getClientConfig() *oauth2.Config {
-	b, err := ioutil.ReadFile("client_id.json")
+func getClientConfig(clientConfPath string) *oauth2.Config {
+	b, err := ioutil.ReadFile(clientConfPath)
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}

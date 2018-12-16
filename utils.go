@@ -8,8 +8,9 @@ import (
 	"os"
 	"strconv"
 	"time"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/reujab/wallpaper"
+	log "github.com/sirupsen/logrus"
 )
 
 func downloadImage(filepath string, url string, width int64, height int64) error {
@@ -34,10 +35,7 @@ func downloadImage(filepath string, url string, width int64, height int64) error
 		return err
 	}
 
-	log.WithFields(log.Fields{
-    "filepath": filepath,
-    "url": url,
-  }).Info("Image downloaded")
+	log.Info("Photo downloaded")
 
 	return nil
 }
